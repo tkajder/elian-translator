@@ -24,55 +24,74 @@ class ElianScript(object):
     def append(self, character):
         self.characters.append(character)
 
-    def __str__(self):
+    def _chunk_words(self):
+        space = characters.get(' ')
+
         word_start = 0
-        words = []
-        space = characters[' ']
 
-        for idx, elian_char in enumerate(self.characters):
+        for i, elian_char in enumerate(self.characters):
             if elian_char == space:
-                word = self.characters[word_start:idx]
-                word_start = idx + 1
+                word = self.characters[word_start:i]
                 if word:
-                    words.append(word)
+                    yield word
+                else:
+                    yield space
 
-        final_word = self.characters[word_start:]
-        words.append(final_word)
+                word_start = i + 1
+
+        yield self.characters[word_start:]
+
+    def _chunk_lines(self, line_char_limit=70):
+        words = self._chunk_words()
 
         line = []
-        lines = []
-        line_len = 0
+        line_char_len = 0
+
         for word in words:
-            word_len = sum([1 + len(elian_char) for elian_char in word])
-            if line_len + word_len > 70:
-                lines.append(line)
-                line = [word]
-                line_len = word_len
+            word_char_len = sum([1 + len(elian_char) for elian_char in word])
+
+            if line_char_len + word_char_len > line_char_limit:
+                yield line
+
+                if len(word) == 1 and word[0] == space:
+                    line = []
+                    line_char_len = 0
+                else:
+                    line = [word]
+                    line_char_len = word_char_len
             else:
                 line.append(word)
-                line_len += word_len + 4
+                line_char_len += word_char_len
 
-        lines.append(line)
+        yield line
 
-        str_lines = []
+    def __str__(self):
+        lines = self._chunk_lines()
+
+        char_space_divider = ' '
+        word_space_divider = '    '
+
+        elian_strs = []
         for line in lines:
-            upper_line = ''
-            middle_line = ''
-            lower_line = ''
+            upper_line, middle_line, lower_line = '', '', ''
+
             for word in line:
-                for elian_char in word:
-                    upper_line += elian_char.upper + ' '
-                    middle_line += elian_char.middle + ' '
-                    lower_line += elian_char.lower + ' '
-                upper_line += '    '
-                middle_line += '    '
-                lower_line += '    '
+                upper_line += char_space_divider.join(
+                    elian_char.upper for elian_char in word)
+                middle_line += char_space_divider.join(
+                    elian_char.middle for elian_char in word)
+                lower_line += char_space_divider.join(
+                    elian_char.lower for elian_char in word)
 
-            str_lines.append(upper_line)
-            str_lines.append(middle_line)
-            str_lines.append(lower_line)
+                upper_line += word_space_divider
+                middle_line += word_space_divider
+                lower_line += word_space_divider
 
-        return '\n'.join(str_lines)
+            elian_strs.append(upper_line)
+            elian_strs.append(middle_line)
+            elian_strs.append(lower_line)
+
+        return '\n'.join(elian_strs)
 
 
 class ElianCharacter(object):
@@ -141,30 +160,39 @@ def text_to_elian_script(text):
 
 
 def cli():
-    parser = argparse.ArgumentParser(description='Generate the elian script representation of ascii text using unicode box characters')
+    parser = argparse.ArgumentParser(
+        description='Generate the elian script representation'
+        ' of ascii text using unicode box characters')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-t', '--text', type=str, help='the text to convert into elian script')
-    group.add_argument('-f', '--file', type=argparse.FileType('r'), help='the file containing ascii text to convert into elian script')
-    parser.add_argument('-o', '--output', type=argparse.FileType('w'), help='a file to write the elian script representaion to')
+    group.add_argument(
+        '-t', '--text', type=str, help='the text to convert'
+        ' into elian script')
+    group.add_argument('-f', '--file', type=argparse.FileType('r'),
+                       help='the file containing ascii'
+                       ' text to convert into elian script')
+    parser.add_argument('-o', '--output', type=argparse.FileType('w'),
+                        help='a file to write the elian'
+                        ' script representaion to')
     args = parser.parse_args()
     return args
 
+
 def main():
-	args = cli()
+    args = cli()
 
-	if args.file:
-		text = text_to_elian_script(args.file.read())
-		args.file.close()
-	elif args.text:
-		text = text_to_elian_script(args.text)
-	else:
-		raise AttributeError('Need input of text or file to convert to elian.')
+    if args.file:
+        text = text_to_elian_script(args.file.read())
+        args.file.close()
+    elif args.text:
+        text = text_to_elian_script(args.text)
+    else:
+        raise AttributeError('Need input of text or file to convert to elian.')
 
-	if args.output:
-		args.output.write(str(text))
-		args.output.close()
-	else:
-		print(text)	
+    if args.output:
+        args.output.write(str(text))
+        args.output.close()
+    else:
+        print(text)
 
 if __name__ == '__main__':
     main()
