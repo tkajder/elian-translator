@@ -33,7 +33,7 @@ optional arguments:
 ```
 
 ```bash
-# The contents of notes.txt are "hello to new york".
+# The contents of notes.txt are "welcome to new york".
 ./elian.py -f notes.txt 
  ·╷      ╷      ╷ ╭─╮        ─╮   ╷      ╷      ·╷
 ╭─┤ ╭─╮  │  ╷ ╷ │ │ ╵ ╭─╮    ·│ ╷ │    ╭─┤ ╭─╮ ╭─┤
