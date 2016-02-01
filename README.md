@@ -1,12 +1,12 @@
-# unicode-elian
+# elian-translator
 
-unicode-elian is an english alphabet to elian script translator. 
+elian-translator is an english alphabet to elian script translator. 
 
-[Elian script](http://www.ccelian.com/ElianScriptFull.html) is a simple block cipher assigning letters of the alphabet to fragments of a grid (similar to the [pig-pen cipher](https://en.wikipedia.org/wiki/Pigpen_cipher)). The translator takes each alphabetic character and converts it into an elian script equivalent using unicode characters and a triple-line format.
+[Elian script](http://www.ccelian.com/ElianScriptFull.html) is a simple block cipher assigning letters of the alphabet to fragments of a grid (similar to the [pig-pen cipher](https://en.wikipedia.org/wiki/Pigpen_cipher)). The translator takes each alphabetic character and converts it into an elian script equivalent using unicode box characters and a triple-line format.
 
 Requirements
 ------------
-unicode-elian relies on Python 3 for unicode in the source code and the `typing` type hinting module.
+elian-translator relies on Python 3 for unicode in the source code and the `typing` type hinting module.
 
 Examples
 --------
