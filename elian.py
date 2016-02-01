@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
+import typing
 
 '''
 Elian Characters Display Form:
@@ -16,107 +18,11 @@ Elian Characters Display Form:
 '''
 
 
-class ElianScript(object):
+ElianCharacter = typing.NamedTuple(
+    'ElianCharacter', [('upper', str), ('middle', str), ('lower', str)])
+ListOfWords = typing.List[typing.List[ElianCharacter]]
 
-    def __init__(self):
-        self.characters = []
-
-    def append(self, character):
-        self.characters.append(character)
-
-    def _chunk_words(self):
-        space = characters.get(' ')
-
-        word_start = 0
-
-        for i, elian_char in enumerate(self.characters):
-            if elian_char == space:
-                word = self.characters[word_start:i]
-                if word:
-                    yield word
-                else:
-                    yield space
-
-                word_start = i + 1
-
-        yield self.characters[word_start:]
-
-    def _chunk_lines(self, line_char_limit=70):
-        words = self._chunk_words()
-
-        line = []
-        line_char_len = 0
-
-        for word in words:
-            word_char_len = sum([1 + len(elian_char) for elian_char in word])
-
-            if line_char_len + word_char_len > line_char_limit:
-                yield line
-
-                if len(word) == 1 and word[0] == space:
-                    line = []
-                    line_char_len = 0
-                else:
-                    line = [word]
-                    line_char_len = word_char_len
-            else:
-                line.append(word)
-                line_char_len += word_char_len
-
-        yield line
-
-    def __str__(self):
-        lines = self._chunk_lines()
-
-        char_space_divider = ' '
-        word_space_divider = '    '
-
-        elian_strs = []
-        for line in lines:
-            upper_line, middle_line, lower_line = '', '', ''
-
-            for word in line:
-                upper_line += char_space_divider.join(
-                    elian_char.upper for elian_char in word)
-                middle_line += char_space_divider.join(
-                    elian_char.middle for elian_char in word)
-                lower_line += char_space_divider.join(
-                    elian_char.lower for elian_char in word)
-
-                upper_line += word_space_divider
-                middle_line += word_space_divider
-                lower_line += word_space_divider
-
-            elian_strs.append(upper_line)
-            elian_strs.append(middle_line)
-            elian_strs.append(lower_line)
-
-        return '\n'.join(elian_strs)
-
-
-class ElianCharacter(object):
-
-    def __init__(self, upper, middle, lower):
-        self.upper = upper
-        self.middle = middle
-        self.lower = lower
-        assert len(self.upper) == len(self.middle) == len(self.lower)
-
-    def __len__(self):
-        return len(self.upper)
-
-    def __eq__(self, other):
-        return (self.upper == other.upper
-                and self.middle == other.middle
-                and self.lower == other.lower)
-
-    def __str__(self):
-        return '{upper}\n{middle}\n{lower}'.format(
-            upper=self.upper,
-            middle=self.middle,
-            lower=self.lower)
-
-characters = {
+CHARACTERS = {
     'A': ElianCharacter('  ', '─╮', ' ╵'),
     'B': ElianCharacter('  ', '─╮', '─╯'),
     'C': ElianCharacter('  ', ' ╷', '─╯'),
@@ -148,15 +54,153 @@ characters = {
 }
 
 
-def text_to_elian_script(text):
-    script = ElianScript()
+class ElianScript(collections.MutableSequence):
 
-    for c in text.upper():
-        elian_char = characters.get(c)
-        if elian_char:
-            script.append(elian_char)
+    def __init__(self, text: str = ''):
+        self._characters = []
+        self.extend_str(text)
 
-    return script
+    def __len__(self):
+        return len(self._characters)
+
+    def __getitem__(self, ii: int):
+        return self._characters[ii]
+
+    def __delitem__(self, ii: int):
+        del self._characters[ii]
+
+    def __setitem__(self, ii: int, val: ElianCharacter):
+        self._characters[ii] = val
+
+    def insert(self, ii: int, val: ElianCharacter):
+        self._characters.insert(ii, val)
+
+    def _str_to_elian_chars(self, text: str):
+        '''Convert each character in text to matching elian character'''
+        for char in text.upper():
+            elian_char = CHARACTERS.get(char)
+
+            # Ignore any characters not found in the elian dictionary standard
+            if elian_char:
+                yield elian_char
+
+    def extend_str(self, val: str):
+        '''Convert str to elian characters then extend normally'''
+        self.extend(self._str_to_elian_chars(val))
+
+    def _chunk_words(self):
+        '''Yield grouped elian characters split on the elian space character'''
+        space = CHARACTERS.get(' ')
+
+        word_start = 0
+
+        for i, elian_char in enumerate(self._characters):
+            if elian_char == space:
+                word = self._characters[word_start:i]
+
+                # A slice[i:i] is empty which should only occur on space
+                # character
+                if word:
+                    yield word
+                else:
+                    yield [space]
+
+                word_start = i + 1
+
+        # Yield the remaining characters that were not broken by a space
+        yield self._characters[word_start:]
+
+    def _chunk_lines(self,
+                     space_between_chars: int,
+                     line_char_limit: int = 70):
+        '''Yield lines from words such that no line exceeds line_char_limit'''
+        words = self._chunk_words()
+
+        line = []
+        line_char_len = 0
+
+        for word in words:
+
+            # Account for each characters text length and the space between in
+            # each character
+            word_char_len = sum(
+                space_between_chars + len(elian_char.upper)
+                for elian_char in word)
+
+            if line_char_len + word_char_len > line_char_limit:
+                yield line
+
+                # If the last character in a line is space, remove the space
+                # from output instead of pushing to next line
+                if len(word) == 1 and word[0] == space:
+                    line = []
+                    line_char_len = 0
+                else:
+                    line = [word]
+                    line_char_len = word_char_len
+            else:
+                line.append(word)
+                line_char_len += word_char_len
+
+        # Yield the last line that did not pass the line_char_limit
+        yield line
+
+    def _word_to_upper_middle_lower(self, word: str, char_space_divider: str):
+        '''Convert the word to characters upper, middle, lower text lines'''
+        upper = char_space_divider.join(
+            elian_char.upper for elian_char in word)
+        middle = char_space_divider.join(
+            elian_char.middle for elian_char in word)
+        lower = char_space_divider.join(
+            elian_char.lower for elian_char in word)
+
+        return upper, middle, lower
+
+    def _line_to_upper_middle_lower(self,
+                                    line: ListOfWords,
+                                    word_space_divider: str,
+                                    char_space_divider: str):
+        '''Convert the list of words to upper, middle, and lower text lines'''
+        upper_line, middle_line, lower_line = '', '', ''
+
+        for word in line:
+            upper_word, middle_word, lower_word = \
+                self._word_to_upper_middle_lower(word, char_space_divider)
+
+            # Append a word space divider if there are words on the line
+            if upper_line:
+                upper_line += word_space_divider
+                middle_line += word_space_divider
+                lower_line += word_space_divider
+
+            upper_line += upper_word
+            middle_line += middle_word
+            lower_line += lower_word
+
+        return upper_line, middle_line, lower_line
+
+    def __str__(self):
+        '''Return the lined elian representation of internal characters'''
+
+        # Define the space between characters and space between words for
+        # readability
+        char_space_divider = ' '*1
+        word_space_divider = ' '*4
+
+        # Convert the list of characters into list of words (which are list of
+        # characters split on spaces) such that each line's words do not exceed
+        # the line character limit
+        lines = self._chunk_lines(len(char_space_divider))
+
+        # Convert each line into corresponding upper, middle, and lower text
+        # lines for output
+        elian_lines = []
+        for line in lines:
+            elian_lines.extend(
+                self._line_to_upper_middle_lower(
+                    line, word_space_divider, char_space_divider))
+
+        return '\n'.join(elian_lines)
 
 
 def cli():
@@ -181,18 +225,18 @@ def main():
     args = cli()
 
     if args.file:
-        text = text_to_elian_script(args.file.read())
+        script = ElianScript(args.file.read())
         args.file.close()
     elif args.text:
-        text = text_to_elian_script(args.text)
+        script = ElianScript(args.text)
     else:
         raise AttributeError('Need input of text or file to convert to elian.')
 
     if args.output:
-        args.output.write(str(text))
+        args.output.write(str(script))
         args.output.close()
     else:
-        print(text)
+        print(script)
 
 if __name__ == '__main__':
     main()
