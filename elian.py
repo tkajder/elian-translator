@@ -210,6 +210,7 @@ class ElianScript(collections.MutableSequence):
 
 
 def cli():
+    '''Parse the command line arguments'''
     parser = argparse.ArgumentParser(
         description='Generate the elian script representation'
         ' of ascii text using unicode box characters')
@@ -218,8 +219,8 @@ def cli():
         '-t', '--text', type=str, help='the text to convert'
         ' into elian script')
     group.add_argument('-f', '--file', type=argparse.FileType('r'),
-                       help='the file containing ascii'
-                       ' text to convert into elian script')
+                       help='the file containing text to'
+                       ' convert into elian script')
     parser.add_argument('-o', '--output', type=argparse.FileType('w'),
                         help='a file to write the elian'
                         ' script representaion to')
