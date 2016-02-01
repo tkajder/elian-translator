@@ -46,3 +46,5 @@ optional arguments:
 Notes
 -----
 For readability output is wrapped to a default of 70 characters, with 1 space between characters in words, and 4 spaces between words in a line. These defaults can be changed in the underlying class functions.
+
+There is no formal definition of punctuation in the Elian script standard and none is defined here. 
