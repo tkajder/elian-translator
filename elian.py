@@ -52,6 +52,7 @@ CHARACTERS = {
     'UNUSED': ElianCharacter('╷ ', '│·', '╰─'),
     ' ': ElianCharacter(' ', ' ', ' ')
 }
+SPACE = CHARACTERS[' ']
 
 
 class ElianScript(collections.MutableSequence):
@@ -90,12 +91,10 @@ class ElianScript(collections.MutableSequence):
 
     def _chunk_words(self):
         '''Yield grouped elian characters split on the elian space character'''
-        space = CHARACTERS.get(' ')
-
         word_start = 0
 
         for i, elian_char in enumerate(self._characters):
-            if elian_char == space:
+            if elian_char == SPACE:
                 word = self._characters[word_start:i]
 
                 # A slice[i:i] is empty which should only occur on space
@@ -103,7 +102,7 @@ class ElianScript(collections.MutableSequence):
                 if word:
                     yield word
                 else:
-                    yield [space]
+                    yield [SPACE]
 
                 word_start = i + 1
 
@@ -112,6 +111,7 @@ class ElianScript(collections.MutableSequence):
 
     def _chunk_lines(self,
                      space_between_chars: int,
+                     space_between_words: int,
                      line_char_limit: int = 70):
         '''Yield lines from words such that no line exceeds line_char_limit'''
         words = self._chunk_words()
@@ -127,20 +127,25 @@ class ElianScript(collections.MutableSequence):
                 space_between_chars + len(elian_char.upper)
                 for elian_char in word)
 
-            if line_char_len + word_char_len > line_char_limit:
+            total_word_len = word_char_len + space_between_words
+
+            if line_char_len + total_word_len > line_char_limit:
                 yield line
 
-                # If the last character in a line is space, remove the space
-                # from output instead of pushing to next line
-                if len(word) == 1 and word[0] == space:
+                # If the last character in a line is space, discard the space
+                # from output instead of pushing to next line. If the word is a
+                # space and the line is empty, discard the space.
+                if len(word) == 1 and word[0] == SPACE:
                     line = []
                     line_char_len = 0
                 else:
                     line = [word]
                     line_char_len = word_char_len
+            elif line_char_len == 0 and len(word) == 1 and word[0] == SPACE:
+                pass
             else:
                 line.append(word)
-                line_char_len += word_char_len
+                line_char_len += total_word_len
 
         # Yield the last line that did not pass the line_char_limit
         yield line
@@ -190,7 +195,8 @@ class ElianScript(collections.MutableSequence):
         # Convert the list of characters into list of words (which are list of
         # characters split on spaces) such that each line's words do not exceed
         # the line character limit
-        lines = self._chunk_lines(len(char_space_divider))
+        lines = self._chunk_lines(
+            len(char_space_divider), len(word_space_divider))
 
         # Convert each line into corresponding upper, middle, and lower text
         # lines for output
