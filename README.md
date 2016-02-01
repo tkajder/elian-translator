@@ -10,7 +10,7 @@ elian-translator relies on Python 3 for unicode in the source code and the `typi
 
 Examples
 --------
-```bash
+```
 ./elian.py --help
 usage: elian.py [-h] (-t TEXT | -f FILE) [-o OUTPUT]
 
